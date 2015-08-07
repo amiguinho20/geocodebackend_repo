@@ -28,6 +28,18 @@ public class EnderecoBO {
 	
 	@Inject
 	private EnderecoDAO enderecoDAO;
+	
+	public void adicionarCasoNaoExista(Endereco endereco)
+	{
+		Double longitude = endereco.getGeometry().getLongitude();
+		Double latitude = endereco.getGeometry().getLatitude();
+		Endereco enderecoResultado = enderecoDAO.consultar(longitude,latitude);
+		if (enderecoResultado == null)
+		{
+			endereco.setGeocodeStatus("OK");
+			enderecoDAO.adicionar(endereco);
+		}
+	}
 	 
 	public Endereco cacheGeocode(Endereco enderecoFiltro)
 	{
@@ -40,8 +52,7 @@ public class EnderecoBO {
 			Geocode geocode = consultarGeocode(enderecoFormatado);
 
 			endereco = enderecoFiltro;
-			endereco.setLatitude(geocode.getLatitude());
-			endereco.setLongitude(geocode.getLongitude());
+			endereco.getGeometry().setLngLat(geocode.getLongitude(), geocode.getLatitude());
 			endereco.setGeocodeStatus(geocode.getGeocoderStatus());
 			
 			enderecoDAO.adicionar(endereco);
@@ -51,8 +62,7 @@ public class EnderecoBO {
 			if (enderecoComGeocode.getGeocodeStatus().equalsIgnoreCase("OK"))
 			{
 				endereco = enderecoFiltro;
-				endereco.setLatitude(enderecoComGeocode.getLatitude());
-				endereco.setLongitude(enderecoComGeocode.getLongitude());
+				endereco.setGeometry(enderecoComGeocode.getGeometry());
 				endereco.setGeocodeStatus(enderecoComGeocode.getGeocodeStatus());
 				endereco.setUltimaAtualizacao(enderecoComGeocode.getUltimaAtualizacao());
 			}
@@ -63,8 +73,7 @@ public class EnderecoBO {
 				Geocode geocode = consultarGeocode(enderecoFormatado);
 
 				endereco = enderecoFiltro;
-				endereco.setLatitude(geocode.getLatitude());
-				endereco.setLongitude(geocode.getLongitude());
+				endereco.getGeometry().setLngLat(geocode.getLongitude(), geocode.getLatitude());
 				endereco.setGeocodeStatus(geocode.getGeocoderStatus());
 				endereco.setUltimaAtualizacao(enderecoComGeocode.getUltimaAtualizacao());
 				
@@ -101,9 +110,9 @@ public class EnderecoBO {
 					List<GeocoderResult> results = geocoderResponse.getResults(); 
 					if (Verificador.isValorado(results))
 					{
-						Float latitude = results.get(0).getGeometry().getLocation().getLat().floatValue();
-					    Float longitude = results.get(0).getGeometry().getLocation().getLng().floatValue();
-					    geocode = new Geocode(latitude.toString(), longitude.toString(), geocoderResponse.getStatus().value());
+						double latitude = results.get(0).getGeometry().getLocation().getLat().doubleValue();
+					    double longitude = results.get(0).getGeometry().getLocation().getLng().doubleValue();
+					    geocode = new Geocode(latitude, longitude, geocoderResponse.getStatus().value());
 					}
 					else
 					{
@@ -172,26 +181,26 @@ public class EnderecoBO {
 	}
 	
 	private class Geocode{
-		private String latitude;
-		private String longitude;
+		private Double latitude;
+		private Double longitude;
 		private String geocoderStatus;
 		public Geocode(){}
-		public Geocode(String latitude, String longitude, String geocoderStatus) {
+		public Geocode(Double latitude, Double longitude, String geocoderStatus) {
 			super();
 			this.latitude = latitude;
 			this.longitude = longitude;
 			this.geocoderStatus = geocoderStatus;
 		}
-		public String getLatitude() {
+		public Double getLatitude() {
 			return latitude;
 		}
-		public void setLatitude(String latitude) {
+		public void setLatitude(Double latitude) {
 			this.latitude = latitude;
 		}
-		public String getLongitude() {
+		public Double getLongitude() {
 			return longitude;
 		}
-		public void setLongitude(String longitude) {
+		public void setLongitude(Double longitude) {
 			this.longitude = longitude;
 		}
 		public String getGeocoderStatus() {

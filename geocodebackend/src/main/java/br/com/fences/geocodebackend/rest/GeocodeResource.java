@@ -34,9 +34,18 @@ public class GeocodeResource {
     {
     	String json = InputStreamParaJson.converter(ipFiltros);
     	Endereco endereco = gson.fromJson(json, Endereco.class);
-    	endereco = enderecoBO.cacheGeocode(endereco);
+    	endereco = enderecoBO.cacheGeocode(endereco); 
     	json = gson.toJson(endereco);
     	return json;
     }
 
+    @POST
+    @Path("cacheGeocode/adicionarCasoNaoExista")
+    public void cadastroCacheAdicionarCasoNaoExista(InputStream ipFiltros)
+    {
+    	String json = InputStreamParaJson.converter(ipFiltros);
+    	Endereco endereco = gson.fromJson(json, Endereco.class);
+    	enderecoBO.adicionarCasoNaoExista(endereco);
+    }
+    
 }

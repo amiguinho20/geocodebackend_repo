@@ -1,5 +1,6 @@
 package br.com.fences.geocodebackend.cadastro.dao;
 
+import static com.mongodb.client.model.Filters.and;
 import static com.mongodb.client.model.Filters.eq;
 
 import java.util.ArrayList;
@@ -12,17 +13,18 @@ import javax.inject.Inject;
 import javax.inject.Named;
 
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
+
+import com.mongodb.BasicDBObject;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
 
 import br.com.fences.fencesutils.conversor.AcentuacaoParaRegex;
 import br.com.fences.fencesutils.conversor.mongodb.Converter;
 import br.com.fences.fencesutils.formatar.FormatarData;
 import br.com.fences.fencesutils.verificador.Verificador;
 import br.com.fences.geocodeentidade.geocode.Endereco;
-
-import com.mongodb.BasicDBObject;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoCursor;
 
 @Named
 @ApplicationScoped
@@ -45,6 +47,25 @@ public class EnderecoDAO {
 	    Document documento = colecao.find(eq("_id", new ObjectId(id))).first();
 	    Endereco endereco = converter.paraObjeto(documento);
 	    return endereco;
+	}
+	
+	public Endereco consultar(double longitude, double latitude)
+	{
+		//BasicDBObject pesquisa = new BasicDBObject();
+		
+		//and("geometry", and(eq("coordinates.0", longitude), eq("coordinates.1", latitude)));
+
+		BasicDBObject pesquisa = new BasicDBObject();
+		pesquisa.append("geometry.coordinates.0", longitude);
+		pesquisa.append("geometry.coordinates.1", latitude);
+		
+		Document documento = colecao.find(pesquisa).first();
+		Endereco endereco = null;
+		if (documento != null)
+		{
+			endereco = converter.paraObjeto(documento);
+		}
+		return endereco;
 	}
 	
 	public Endereco consultar(Endereco enderecoFiltro)

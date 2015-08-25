@@ -1,6 +1,5 @@
 package br.com.fences.geocodebackend.cadastro.dao;
 
-import static com.mongodb.client.model.Filters.and;
 import static com.mongodb.client.model.Filters.eq;
 
 import java.util.ArrayList;
@@ -9,11 +8,11 @@ import java.util.List;
 import java.util.Map;
 
 import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.inject.New;
 import javax.inject.Inject;
 import javax.inject.Named;
 
 import org.bson.Document;
-import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 
 import com.mongodb.BasicDBObject;
@@ -21,7 +20,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 
 import br.com.fences.fencesutils.conversor.AcentuacaoParaRegex;
-import br.com.fences.fencesutils.conversor.mongodb.Converter;
+import br.com.fences.fencesutils.conversor.converter.Converter;
 import br.com.fences.fencesutils.formatar.FormatarData;
 import br.com.fences.fencesutils.verificador.Verificador;
 import br.com.fences.geocodeentidade.geocode.Endereco;
@@ -45,7 +44,7 @@ public class EnderecoDAO {
 	public Endereco consultar(final String id)
 	{
 	    Document documento = colecao.find(eq("_id", new ObjectId(id))).first();
-	    Endereco endereco = converter.paraObjeto(documento);
+	    Endereco endereco = converter.paraObjeto(documento, Endereco.class);
 	    return endereco;
 	}
 	
@@ -63,19 +62,24 @@ public class EnderecoDAO {
 		Endereco endereco = null;
 		if (documento != null)
 		{
-			endereco = converter.paraObjeto(documento);
+			endereco = converter.paraObjeto(documento, Endereco.class);
 		}
 		return endereco;
 	}
 	
 	public Endereco consultar(Endereco enderecoFiltro)
 	{
-		BasicDBObject pesquisa = montarPesquisaEndereco(enderecoFiltro);
+		BasicDBObject pesquisa = montarPesquisaEnderecoExato(enderecoFiltro);
 		Document documento = colecao.find(pesquisa).first();
 		Endereco enderecoPesquisado = null;
+		if (documento == null)
+		{
+			pesquisa = montarPesquisaEnderecoRegex(enderecoFiltro);
+			documento = colecao.find(pesquisa).first();
+		}
 		if (documento != null)
 		{
-			enderecoPesquisado = converter.paraObjeto(documento);
+			enderecoPesquisado = converter.paraObjeto(documento, Endereco.class);
 		}
 		return enderecoPesquisado;
 	}
@@ -111,7 +115,7 @@ public class EnderecoDAO {
 	    try {
 	        while (cursor.hasNext()) {
 	        	Document documento = cursor.next();
-	        	Endereco endereco = converter.paraObjeto(documento);
+	        	Endereco endereco = converter.paraObjeto(documento, Endereco.class);
 	        	enderecos.add(endereco);
 	        }
 	    } finally {
@@ -204,7 +208,64 @@ public class EnderecoDAO {
 		return ultimaAtualizacao; 
 	}
 	
-	private BasicDBObject montarPesquisaEndereco(Endereco endereco)
+	private BasicDBObject montarPesquisaEnderecoExato(Endereco endereco)
+	{
+		BasicDBObject pesquisa = new BasicDBObject();
+		if (Verificador.isValorado(endereco.getLogradouro()))
+		{
+			pesquisa.append("logradouro", endereco.getLogradouro());
+		}
+		if (Verificador.isValorado(endereco.getNumero()))
+		{
+			int dezena = 10;
+			int intervaloSuperior = 0;
+			int intervaloInferior = 0;
+			int numero = Integer.parseInt(endereco.getNumero());
+			if (numero == 0)
+			{
+				intervaloSuperior = dezena;
+			}
+			else
+			{
+				if (numero % dezena == 0)
+				{
+					intervaloInferior = numero;
+				}
+				else
+				{
+					int resto = numero % dezena;
+					intervaloInferior = numero - resto;
+				}
+				intervaloSuperior = intervaloInferior + dezena;
+			}
+			
+			List<String> numeros = new ArrayList<>();
+			for (int num = intervaloInferior ; num < intervaloSuperior ; num++)
+			{
+				numeros.add(Integer.toString(num));
+			}
+			pesquisa.put("numero", new BasicDBObject("$in", numeros));
+			
+			//-- normaliza
+			endereco.setNumero(Integer.toString(numero));
+		}
+		if (Verificador.isValorado(endereco.getBairro()))
+		{
+			pesquisa.append("bairro", endereco.getBairro());
+		}
+		if (Verificador.isValorado(endereco.getCidade()))
+		{
+			pesquisa.append("cidade", endereco.getCidade());
+		}
+		if (Verificador.isValorado(endereco.getUf()))
+		{
+			pesquisa.append("uf", endereco.getUf());
+		}
+		return pesquisa;
+	}
+
+	
+	private BasicDBObject montarPesquisaEnderecoRegex(Endereco endereco)
 	{
 		BasicDBObject pesquisa = new BasicDBObject();
 		if (Verificador.isValorado(endereco.getLogradouro()))

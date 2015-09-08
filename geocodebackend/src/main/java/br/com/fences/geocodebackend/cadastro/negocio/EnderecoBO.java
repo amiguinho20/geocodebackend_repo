@@ -27,6 +27,9 @@ public class EnderecoBO {
 	private static final Geocoder geocoder = new Geocoder();
 	
 	@Inject
+	private TemporizadorCacheSingleton temporizador;
+	
+	@Inject
 	private EnderecoDAO enderecoDAO;
 	
 	public void adicionarCasoNaoExista(Endereco endereco)
@@ -94,47 +97,55 @@ public class EnderecoBO {
 		Geocode geocode = new Geocode();
 		try
 		{
-			while (!sucesso && qtdTentativa < 3)
+			if (temporizador.permiteConsultarGeocode())
 			{
-				qtdTentativa++;
-
-				GeocoderRequest geocoderRequest = new GeocoderRequestBuilder().setAddress(endereco).setLanguage(IDIOMA).getGeocoderRequest();
-				GeocodeResponse geocoderResponse = geocoder.geocode(geocoderRequest);
-
-				geocoderStatus = geocoderResponse.getStatus();
-				geocode.setGeocoderStatus(geocoderStatus.value());
-				if (!geocoderStatus.equals(GeocoderStatus.OVER_QUERY_LIMIT))
+				while (!sucesso && qtdTentativa < 3)
 				{
-					sucesso = true;
-					
-					List<GeocoderResult> results = geocoderResponse.getResults(); 
-					if (Verificador.isValorado(results))
+					qtdTentativa++;
+	
+					GeocoderRequest geocoderRequest = new GeocoderRequestBuilder().setAddress(endereco).setLanguage(IDIOMA).getGeocoderRequest();
+					GeocodeResponse geocoderResponse = geocoder.geocode(geocoderRequest);
+	
+					geocoderStatus = geocoderResponse.getStatus();
+					geocode.setGeocoderStatus(geocoderStatus.value());
+					if (!geocoderStatus.equals(GeocoderStatus.OVER_QUERY_LIMIT))
 					{
-						double latitude = results.get(0).getGeometry().getLocation().getLat().doubleValue();
-					    double longitude = results.get(0).getGeometry().getLocation().getLng().doubleValue();
-					    geocode = new Geocode(latitude, longitude, geocoderResponse.getStatus().value());
+						sucesso = true;
+						
+						List<GeocoderResult> results = geocoderResponse.getResults(); 
+						if (Verificador.isValorado(results))
+						{
+							double latitude = results.get(0).getGeometry().getLocation().getLat().doubleValue();
+						    double longitude = results.get(0).getGeometry().getLocation().getLng().doubleValue();
+						    geocode = new Geocode(latitude, longitude, geocoderResponse.getStatus().value());
+						}
+						else
+						{
+							//logger.info("consultarGeocode: geocode erro[" + geocoderStatus + "] para o endereco [" + endereco + "].");
+						}
 					}
 					else
 					{
-						//logger.info("consultarGeocode: geocode erro[" + geocoderStatus + "] para o endereco [" + endereco + "].");
+						Thread.sleep(3000); //-- aguardar 3 segundos 
 					}
 				}
-				else
+				if (!geocoderStatus.equals(GeocoderStatus.OK))
 				{
-					Thread.sleep(3000); //-- aguardar 3 segundos 
+					geocode.setGeocoderStatus(geocoderStatus.value());
+					if (geocoderStatus.equals(GeocoderStatus.OVER_QUERY_LIMIT))
+					{
+						//throw new RestRuntimeException(1, "Limite de 2500 pesquisas diárias foi atingido. [OVER_QUERY_LIMIT]");
+						temporizador.registrarTempoDoUltimoQueryLimit();
+					}
+					if (geocoderStatus.equals(GeocoderStatus.ZERO_RESULTS))
+					{
+						//throw new RestRuntimeException(2, "Endereço sem retorno do Google.[ZERO_RESULTS]");
+					}
 				}
 			}
-			if (!geocoderStatus.equals(GeocoderStatus.OK))
+			else
 			{
-				geocode.setGeocoderStatus(geocoderStatus.value());
-				if (geocoderStatus.equals(GeocoderStatus.OVER_QUERY_LIMIT))
-				{
-					//throw new RestRuntimeException(1, "Limite de 2500 pesquisas diárias foi atingido. [OVER_QUERY_LIMIT]");
-				}
-				if (geocoderStatus.equals(GeocoderStatus.ZERO_RESULTS))
-				{
-					//throw new RestRuntimeException(2, "Endereço sem retorno do Google.[ZERO_RESULTS]");
-				}
+				geocode.setGeocoderStatus(GeocoderStatus.OVER_QUERY_LIMIT.name());
 			}
 		}
 		catch(Exception e)

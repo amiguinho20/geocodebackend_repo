@@ -3,15 +3,16 @@ package br.com.fences.geocodebackend.cadastro.dao;
 import static com.mongodb.client.model.Filters.eq;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
 import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.New;
 import javax.inject.Inject;
 import javax.inject.Named;
 
+import org.apache.log4j.Logger;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 
@@ -23,12 +24,15 @@ import br.com.fences.fencesutils.conversor.AcentuacaoParaRegex;
 import br.com.fences.fencesutils.conversor.converter.Converter;
 import br.com.fences.fencesutils.formatar.FormatarData;
 import br.com.fences.fencesutils.verificador.Verificador;
+import br.com.fences.geocodebackend.config.Log;
 import br.com.fences.geocodeentidade.geocode.Endereco;
 
 @Named
 @ApplicationScoped
 public class EnderecoDAO {     
 
+	@Inject
+	private transient Logger logger;
 	
 	@Inject
 	private Converter<Endereco> converter;
@@ -67,14 +71,22 @@ public class EnderecoDAO {
 		return endereco;
 	}
 	
+	@Log
 	public Endereco consultar(Endereco enderecoFiltro)
 	{
 		BasicDBObject pesquisa = montarPesquisaEnderecoExato(enderecoFiltro);
+		
+		long tempoInicial = Calendar.getInstance().getTimeInMillis();
 		Document documento = colecao.find(pesquisa).first();
+		logger.info("pesquisa exata: " + calcularTempo(tempoInicial));
+		
 		Endereco enderecoPesquisado = null;
 		if (documento == null)
 		{
+			tempoInicial = Calendar.getInstance().getTimeInMillis();
 			pesquisa = montarPesquisaEnderecoRegex(enderecoFiltro);
+			logger.info("pesquisa regex: " + calcularTempo(tempoInicial));
+			
 			documento = colecao.find(pesquisa).first();
 		}
 		if (documento != null)
@@ -82,6 +94,19 @@ public class EnderecoDAO {
 			enderecoPesquisado = converter.paraObjeto(documento, Endereco.class);
 		}
 		return enderecoPesquisado;
+	}
+	
+	private String calcularTempo(long tempoInicial) {
+		long tempoFinal = System.currentTimeMillis();
+		long duracaoLong = tempoFinal - tempoInicial;
+		
+		long segundos = duracaoLong / 1000;
+		long minutos = segundos / 60;
+		long horas = minutos / 60;
+		
+		String duracao = String.format("%02d:%02d:%02d", horas, minutos, segundos);
+		
+		return duracao;
 	}
 	
 	/**

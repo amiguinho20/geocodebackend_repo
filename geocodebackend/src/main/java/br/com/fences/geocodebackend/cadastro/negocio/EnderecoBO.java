@@ -40,6 +40,7 @@ public class EnderecoBO {
 		if (enderecoResultado == null)
 		{
 			endereco.setGeocodeStatus("OK");
+			colocarEmMaiusculoComRetiradaDeAcentos(endereco);
 			enderecoDAO.adicionar(endereco);
 		}
 	}
@@ -47,6 +48,7 @@ public class EnderecoBO {
 	public Endereco cacheGeocode(Endereco enderecoFiltro)
 	{
 		Endereco endereco = null;
+		colocarEmMaiusculoComRetiradaDeAcentos(enderecoFiltro);
 		Endereco enderecoComGeocode = enderecoDAO.consultar(enderecoFiltro);
 		if (enderecoComGeocode == null)
 		{
@@ -171,6 +173,35 @@ public class EnderecoBO {
 	    Pattern pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
 	    String retorno = pattern.matcher(normalizador).replaceAll("");
 	    return retorno;
+	}
+	
+	
+	public void colocarEmMaiusculoComRetiradaDeAcentos(Endereco endereco)
+	{
+		if (Verificador.isValorado(endereco.getLogradouro()))
+		{
+			endereco.setLogradouro(retirarAcentos(endereco.getLogradouro().toUpperCase()));
+		}
+		if (Verificador.isValorado(endereco.getNumero()))
+		{
+			endereco.setNumero(retirarAcentos(endereco.getNumero().toUpperCase()));
+		}
+		if (Verificador.isValorado(endereco.getComplemento()))
+		{
+			endereco.setComplemento(retirarAcentos(endereco.getComplemento().toUpperCase()));
+		}
+		if (Verificador.isValorado(endereco.getBairro()))
+		{
+			endereco.setBairro(retirarAcentos(endereco.getBairro().toUpperCase()));
+		}
+		if (Verificador.isValorado(endereco.getCidade()))
+		{
+			endereco.setCidade(retirarAcentos(endereco.getCidade().toUpperCase()));
+		}
+		if (Verificador.isValorado(endereco.getUf()))
+		{
+			endereco.setUf(retirarAcentos(endereco.getUf().toUpperCase()));
+		}
 	}
 	
 	public String concatenarEndereco(String... campos) 

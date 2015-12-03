@@ -19,7 +19,7 @@ import com.mongodb.client.MongoDatabase;
 @ApplicationScoped
 public class MongoProvider {
 
-	private static final String COLECAO_CADASTRO_ENDERECO = "cadastro_endereco_bruto";
+	private static final String COLECAO_CADASTRO_ENDERECO = "cadastro_endereco_bruto02";
 	
 	private MongoClient conexao;
 	private MongoDatabase banco;

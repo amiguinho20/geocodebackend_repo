@@ -8,7 +8,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
 import javax.inject.Named;
 
@@ -24,11 +24,10 @@ import br.com.fences.fencesutils.conversor.AcentuacaoParaRegex;
 import br.com.fences.fencesutils.conversor.converter.Converter;
 import br.com.fences.fencesutils.formatar.FormatarData;
 import br.com.fences.fencesutils.verificador.Verificador;
-import br.com.fences.geocodebackend.config.Log;
 import br.com.fences.geocodeentidade.geocode.Endereco;
 
 @Named
-@ApplicationScoped
+@RequestScoped
 public class EnderecoDAO {     
 
 	@Inject
@@ -71,21 +70,21 @@ public class EnderecoDAO {
 		return endereco;
 	}
 	
-	@Log
+	//@Log
 	public Endereco consultar(Endereco enderecoFiltro)
 	{
 		BasicDBObject pesquisa = montarPesquisaEnderecoExato(enderecoFiltro);
 		
 		long tempoInicial = Calendar.getInstance().getTimeInMillis();
 		Document documento = colecao.find(pesquisa).first();
-		logger.info("pesquisa exata: " + calcularTempo(tempoInicial));
+		//logger.info("pesquisa exata: " + calcularTempo(tempoInicial));
 		
 		Endereco enderecoPesquisado = null;
 		if (documento == null)
 		{
 			tempoInicial = Calendar.getInstance().getTimeInMillis();
 			pesquisa = montarPesquisaEnderecoRegex(enderecoFiltro);
-			logger.info("pesquisa regex: " + calcularTempo(tempoInicial));
+			//logger.info("pesquisa regex: " + calcularTempo(tempoInicial));
 			
 			documento = colecao.find(pesquisa).first();
 		}
@@ -290,13 +289,20 @@ public class EnderecoDAO {
 	}
 
 	
+	/**
+	 * 23.10.2015 - O cadastro de geocode passou a ter apenas letras maiusculas e sem acentuacao.
+	 * Por isso, a expressao regular para acentuacao e maiusculas foi desabilitada. Ficando apenas
+	 * a expressao regular de fragmento.
+	 */
 	private BasicDBObject montarPesquisaEnderecoRegex(Endereco endereco)
 	{
 		BasicDBObject pesquisa = new BasicDBObject();
 		if (Verificador.isValorado(endereco.getLogradouro()))
 		{
-			String convertido = AcentuacaoParaRegex.converter(endereco.getLogradouro());
-			pesquisa.append("logradouro", new BasicDBObject("$regex", convertido).append("$options", "i"));
+//			String convertido = AcentuacaoParaRegex.converter(endereco.getLogradouro());
+//			pesquisa.append("logradouro", new BasicDBObject("$regex", convertido).append("$options", "i"));			
+			String convertido = endereco.getLogradouro();
+			pesquisa.append("logradouro", new BasicDBObject("$regex", convertido));
 		}
 		if (Verificador.isValorado(endereco.getNumero()))
 		{
@@ -337,18 +343,25 @@ public class EnderecoDAO {
 		}
 		if (Verificador.isValorado(endereco.getBairro()))
 		{
-			String convertido = AcentuacaoParaRegex.converter(endereco.getBairro());
-			pesquisa.append("bairro", new BasicDBObject("$regex", convertido).append("$options", "i"));
+//			String convertido = AcentuacaoParaRegex.converter(endereco.getBairro());
+//			pesquisa.append("bairro", new BasicDBObject("$regex", convertido).append("$options", "i"));
+			String convertido = endereco.getBairro();
+			pesquisa.append("bairro", new BasicDBObject("$regex", convertido));
 		}
 		if (Verificador.isValorado(endereco.getCidade()))
 		{
-			String convertido = AcentuacaoParaRegex.converter(endereco.getCidade());
-			pesquisa.append("cidade", new BasicDBObject("$regex", convertido).append("$options", "i"));
+//			String convertido = AcentuacaoParaRegex.converter(endereco.getCidade());
+//			pesquisa.append("cidade", new BasicDBObject("$regex", convertido).append("$options", "i"));
+			String convertido = endereco.getCidade();
+			pesquisa.append("cidade", new BasicDBObject("$regex", convertido));
 		}
 		if (Verificador.isValorado(endereco.getUf()))
 		{
-			String convertido = AcentuacaoParaRegex.converter(endereco.getUf());
-			pesquisa.append("uf", new BasicDBObject("$regex", convertido).append("$options", "i"));
+//			String convertido = AcentuacaoParaRegex.converter(endereco.getUf());
+//			pesquisa.append("uf", new BasicDBObject("$regex", convertido).append("$options", "i"));
+			String convertido = endereco.getUf();
+			pesquisa.append("uf", new BasicDBObject("$regex", convertido));
+
 		}
 		return pesquisa;
 	}
